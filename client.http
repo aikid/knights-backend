@@ -1,0 +1,50 @@
+@baseUrl = http://localhost:3333
+@knightId = 67985a5913f6a4b9fab22520
+
+# @name create_knight
+POST {{baseUrl}}/knights
+Content-Type: application/json
+
+{ 
+    "name": "Thales", 
+    "nickname": "the_Orc", 
+    "birthday": "1994-04-27T00:00:00Z",  
+    "weapons": [ 
+        { 
+            "name": "Axe", 
+            "mod": 3, 
+            "attr": " strength", 
+            "equipped": true 
+        } 
+    ], 
+    "attributes": { 
+        "strength": 0, 
+        "dexterity": 0, 
+        "constitution": 0, 
+        "intelligence": 0, 
+        "wisdom": 0, 
+        "charisma": 0 
+    },
+    "keyAttribute": "dexterity",
+    "isHero": false 
+}
+
+###
+
+# @name get_knight
+GET {{baseUrl}}/knights
+
+###
+
+# @name get_knight_by_id
+GET {{baseUrl}}/knights/{{knightId}}
+
+###
+
+# @name update_knight
+PATCH  {{baseUrl}}/knights/{{knightId}}/nickname
+Content-Type: application/json
+
+{
+    "nickname": "mat_Twilight"
+}

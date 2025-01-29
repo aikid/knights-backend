@@ -1,0 +1,24 @@
+services:
+  mongo:
+    image: mongo:latest
+    container_name: node-knights-mongo
+    restart: always
+    ports:
+      - 27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: knights
+      MONGO_INITDB_ROOT_PASSWORD: knights2025BTG
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: node-knights-mongo-express
+    restart: always
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: knights
+      ME_CONFIG_MONGODB_ADMINPASSWORD: knights2025BTG
+      ME_CONFIG_MONGODB_URL: mongodb://knights:knights2025BTG@localhost:27017/
+      ME_CONFIG_BASICAUTH: false
+    depends_on:
+      - mongo
