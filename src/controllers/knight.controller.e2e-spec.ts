@@ -2,16 +2,19 @@ import { INestApplication } from "@nestjs/common";
 import { AppModule } from "src/app.module";
 import { Test } from '@nestjs/testing'
 import request from 'supertest'
+import { PrismaService } from "src/prisma/prisma.service";
 
 describe('Create Knight (E2E)', () => {
-    let app: INestApplication;
-    
+    let app: INestApplication
+    let prisma: PrismaService
+
     beforeAll(async () => {
         const moduleRef = await Test.createTestingModule({
             imports: [AppModule],
-        }).compile();
+        }).compile()
 
-        app = moduleRef.createNestApplication();
+        app = moduleRef.createNestApplication()
+        prisma = moduleRef.get(PrismaService)
         await app.init();
     });
 
@@ -39,5 +42,24 @@ describe('Create Knight (E2E)', () => {
             keyAttribute: "strength",
             isHero: false 
         })
+
+        expect(response.statusCode).toBe(201)
+
+        const userOnDatabase = await prisma.knight.findUnique({
+            where: {
+                nickname: 'mat_Twilight'
+            }
+        })
+
+        expect(userOnDatabase).toBeTruthy()
     })
+
+    test('[GET] /knights', async () => {
+        const response = await request(app.getHttpServer()).get('/knights')
+        expect(response.statusCode).toBe(200)
+    })
+
+    afterAll(async () => {
+        await app.close();
+    });
 })

@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:3333
-@knightId = 67985a5913f6a4b9fab22520
+@knightId = 679a1f1cd3277853db4a8e8b
 
 # @name create_knight
 POST {{baseUrl}}/knights
@@ -46,5 +46,10 @@ PATCH  {{baseUrl}}/knights/{{knightId}}/nickname
 Content-Type: application/json
 
 {
-    "nickname": "mat_Twilight"
+    "nickname": "sir_Orc"
 }
+
+###
+
+# @name promote_knight
+DELETE   {{baseUrl}}/knights/{{knightId}}

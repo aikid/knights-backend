@@ -1,8 +1,8 @@
 import { Controller, Get, Query, Param, HttpException, HttpStatus, Post, Body, UsePipes, HttpCode, Patch, Delete } from '@nestjs/common'
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { PrismaService } from '../prisma/prisma.service'
 import { z } from 'zod'
 import { ZodValidationPipe } from '../pipes/zod-validation.pipe';
-
 
 const weaponSchema = z.object({
   name: z.string(),
@@ -21,8 +21,8 @@ const attributesSchema = z.object({
 });
 
 const createKnightBodySchema = z.object({
-  name: z.string(),
-  nickname: z.string(),
+  name: z.string().min(1, "Name cannot be empty").max(50, "Name too long"),
+  nickname: z.string().min(1, "Nickname cannot be empty").max(15, "Nickname too long"),
   birthday: z.string().refine((date) => !isNaN(Date.parse(date)), {
     message: "Invalid date format. Use ISO 8601 format.",
   }),
@@ -32,13 +32,14 @@ const createKnightBodySchema = z.object({
 })
 
 const updateNicknameSchema = z.object({
-  nickname: z.string().min(1, "Nickname cannot be empty").max(50, "Nickname too long"),
+  nickname: z.string().min(1, "Nickname cannot be empty").max(15, "Nickname too long"),
 });
 
 
 type CreateKnightBodySchema = z.infer<typeof createKnightBodySchema>
 type UpdateNicknameSchema = z.infer<typeof updateNicknameSchema>
 
+@ApiTags('knights')
 @Controller('/knights')
 export class KnightController {
   constructor(
@@ -46,7 +47,10 @@ export class KnightController {
   ) {}
 
   @Get()
-  async getKnights(@Query('filter') filter: any): Promise<any> {
+  @ApiOperation({ summary: 'Lista todos os cavaleiros, com opção de filtrar apenas os heróis' })
+  @ApiQuery({ name: 'filter', required: false, enum: ['heroes'], description: 'Filtro opcional para listar apenas os cavaleiros heróis' })
+  @ApiResponse({ status: 200, description: 'Lista de cavaleiros retornada com sucesso' })
+  async getKnights(@Query('filter') filter: any): Promise<any[]> {
     if(filter && filter === 'heroes') {
       const heroes = await this.prisma.knight.findMany({where: { isHero: true }})
       return heroes
@@ -56,6 +60,10 @@ export class KnightController {
   }
 
   @Get('/:id')
+  @ApiOperation({ summary: 'Obtém um cavaleiro específico pelo ID' })
+  @ApiParam({ name: 'id', required: true, description: 'ID do cavaleiro' })
+  @ApiResponse({ status: 200, description: 'Cavaleiro encontrado' })
+  @ApiResponse({ status: 404, description: 'Cavaleiro não encontrado' })
   async getKnight(@Param('id') id: any): Promise<any> {
       const knight = await this.prisma.knight.findUnique({where: { id: id }})
       if(!knight) throw new HttpException("knight not found!", HttpStatus.BAD_REQUEST)
@@ -65,6 +73,36 @@ export class KnightController {
   @Post()
   @HttpCode(201)
   @UsePipes(new ZodValidationPipe(createKnightBodySchema))
+  @ApiOperation({ summary: 'Cria um novo cavaleiro' })
+  @ApiBody({ 
+    description: 'Dados do cavaleiro',
+    schema: {
+      example: {
+        name: "Lancelot",
+        nickname: "K_lancelot",
+        birthday: "1990-01-01T00:00:00.000Z",
+        weapons: [
+          {
+            name: "Sword",
+            mod: 3,
+            attr: " strength",
+            equipped: true
+          }
+        ],
+        attributes: {
+          strength: 10,
+          dexterity: 10,
+          constitution: 10,
+          intelligence: 10,
+          wisdom: 10,
+          charisma: 10,
+        },
+        keyAttribute: "strength",
+        isHero: false,
+      }
+    }
+  })
+  @ApiResponse({ status: 201, description: 'Cavaleiro criado com sucesso' })
   async createKnight(@Body() body: CreateKnightBodySchema): Promise<any> {
     try {
       const {name,nickname,birthday,weapons,attributes,keyAttribute} = body
@@ -91,7 +129,14 @@ export class KnightController {
   }
 
   @Patch('/:id/nickname')
-  @HttpCode(204)
+  @ApiOperation({ summary: 'Atualiza o nickname de um cavaleiro' })
+  @ApiParam({ name: 'id', required: true, description: 'ID do cavaleiro' })
+  @ApiBody({
+    description: 'Novo nickname',
+    schema: { example: { nickname: "Sir_Lancelot" } }
+  })
+  @ApiResponse({ status: 200, description: 'Nickname atualizado com sucesso' })
+  @ApiResponse({ status: 404, description: 'Cavaleiro não encontrado' })
   async updateNickname(
     @Param('id') id: string, 
     @Body(new ZodValidationPipe(updateNicknameSchema)) body: UpdateNicknameSchema
@@ -115,10 +160,12 @@ export class KnightController {
         throw new HttpException('This nickname is already in use!', HttpStatus.BAD_REQUEST);
       }
 
-      await this.prisma.knight.update({
+      const updateKnight = await this.prisma.knight.update({
         where: { id },
         data: { nickname },
       });
+
+      return updateKnight
     } catch (error) {
       console.error(error);
       throw new HttpException(`Failed to update knight: ${error?.response}`, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -126,7 +173,10 @@ export class KnightController {
   }
 
   @Delete('/:id')
-  @HttpCode(204)
+  @ApiOperation({ summary: 'Promove um cavaleiro a herói' })
+  @ApiParam({ name: 'id', required: true, description: 'ID do cavaleiro' })
+  @ApiResponse({ status: 200, description: 'Cavaleiro promovido com sucesso' })
+  @ApiResponse({ status: 404, description: 'Cavaleiro não encontrado' })
   async promoteKnight(@Param('id') id: string): Promise<any> {
     try {
       const knight = await this.prisma.knight.findUnique({
@@ -137,10 +187,12 @@ export class KnightController {
         throw new HttpException('Knight not found!', HttpStatus.NOT_FOUND);
       }
 
-      await this.prisma.knight.update({
+      const promotedKnight = await this.prisma.knight.update({
         where: { id },
         data: { isHero: true },
       });
+
+      return promotedKnight
     } catch (error) {
       console.error(error);
       throw new HttpException(`Failed to promote knight: ${error?.response}`, HttpStatus.INTERNAL_SERVER_ERROR);
